@@ -33,7 +33,7 @@ export default function LoginPage() {
 
   return (
     <div className="wrap" style={{ maxWidth: 380, paddingTop: 80 }}>
-      <h1>Sports Betting Scanner</h1>
+      <h1>🎯 Sports Betting Scanner</h1>
       <p className="sub">Enter the site password to continue.</p>
       <form onSubmit={submit} className="panel">
         <label>Password</label>
@@ -43,7 +43,7 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           autoFocus
         />
-        {error && <p style={{ color: "var(--red)", fontSize: 13, marginTop: 10 }}>{error}</p>}
+        {error && <p style={{ color: "var(--critical)", fontSize: 13, marginTop: 10 }}>{error}</p>}
         <button className="primary" type="submit" disabled={loading} style={{ marginTop: 14, width: "100%" }}>
           {loading ? "Checking…" : "Enter"}
         </button>

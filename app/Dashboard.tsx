@@ -13,6 +13,8 @@ interface ScanResult {
   ts: number;
 }
 
+const MAX_EDGE_FOR_METER = 0.15;
+
 function pct(n: number): string {
   return `${(n * 100).toFixed(1)}%`;
 }
@@ -25,6 +27,41 @@ function fmtWhen(iso: string): string {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function EdgeMeter({ edge }: { edge: number }) {
+  const frac = Math.min(edge / MAX_EDGE_FOR_METER, 1);
+  return (
+    <span className="edge-meter">
+      <span className="pos">+{pct(edge)}</span>
+      <span className="bar"><span className="fill" style={{ width: `${frac * 100}%` }} /></span>
+    </span>
+  );
+}
+
+function PickCard({ pick }: { pick: Pick }) {
+  return (
+    <div className="pick-card">
+      <div className="top-row">
+        <div>
+          <div className="side">{pick.side}</div>
+          <div className="market">{pick.marketTitle}</div>
+        </div>
+        <div>
+          <div className="edge-big">+{pct(pick.edgePct)}</div>
+          <div className="edge-label">edge</div>
+        </div>
+      </div>
+      <div className="stat-row">
+        <span>Platform</span>
+        <span className={`pill ${pick.platform.toLowerCase()}`}>{pick.platform}</span>
+      </div>
+      <div className="stat-row"><span>Price / Fair</span><b>{pct(pick.price)} / {pct(pick.fairProb)}</b></div>
+      <div className="stat-row"><span>EV per $1</span><b className="pos">+{pct(pick.evPerDollar)}</b></div>
+      <div className="stat-row"><span>Kelly stake</span><b>${pick.kellyStake.toFixed(2)}</b></div>
+      <div className="stat-row"><span>When</span><b>{fmtWhen(pick.commenceTime)}</b></div>
+    </div>
+  );
 }
 
 function PickTable({ picks, title }: { picks: Pick[]; title: string }) {
@@ -57,7 +94,7 @@ function PickTable({ picks, title }: { picks: Pick[]; title: string }) {
                   <td>{p.side}</td>
                   <td>{pct(p.price)}</td>
                   <td>{pct(p.fairProb)}</td>
-                  <td className="pos">+{pct(p.edgePct)}</td>
+                  <td><EdgeMeter edge={p.edgePct} /></td>
                   <td className="pos">+{pct(p.evPerDollar)}</td>
                   <td>${p.kellyStake.toFixed(2)}</td>
                   <td>{p.marketTitle}</td>
@@ -97,56 +134,65 @@ export default function Dashboard() {
     }
   }
 
+  const bestEdge = result ? [...result.suggested, ...result.other].reduce((m, p) => Math.max(m, p.edgePct), 0) : 0;
+
   return (
     <div className="wrap">
+      <div className="top">
+        <div className="brand">
+          <h1>🎯 Sports Betting Scanner</h1>
+        </div>
+      </div>
+      <div className="sub">De-vigged sportsbook consensus vs. live Kalshi &amp; Polymarket prices.</div>
+
       <div className="banner">
         <strong>v1 scope:</strong> moneyline only, on MLB/NBA/WNBA/NFL/EPL/MLS, matched against Kalshi + Polymarket
         by best-effort team-name matching. Tennis/boxing (rotating Odds API keys), alt-line/BTTS enrichment,
         season-record context, and the chat assistant from the original bot aren&apos;t ported yet.
       </div>
 
-      <h1>Sports Betting +EV Scanner</h1>
-      <div className="sub">De-vigged sportsbook consensus vs. live Kalshi &amp; Polymarket prices.</div>
+      <div className="tabs">
+        {SPORTS.map((s) => (
+          <button key={s.key} className={`tab ${sport === s.key ? "active" : ""}`} onClick={() => setSport(s.key)}>
+            <span className="emoji">{s.emoji}</span>{s.label}
+          </button>
+        ))}
+      </div>
 
       <div className="panel">
-        <h2>Scan</h2>
-        <div className="controls-grid">
-          <div>
-            <label>Sport</label>
-            <select value={sport} onChange={(e) => setSport(e.target.value)}>
-              {SPORTS.map((s) => (
-                <option key={s.key} value={s.key}>{s.label}</option>
-              ))}
-            </select>
+        <div className="row" style={{ marginBottom: 14 }}>
+          <div className="segmented">
+            <button className={!allDates ? "active" : ""} onClick={() => setAllDates(false)}>Today &amp; tomorrow</button>
+            <button className={allDates ? "active" : ""} onClick={() => setAllDates(true)}>All upcoming</button>
           </div>
-          <div>
-            <label>Date window</label>
-            <select value={allDates ? "all" : "soon"} onChange={(e) => setAllDates(e.target.value === "all")}>
-              <option value="soon">Today &amp; tomorrow</option>
-              <option value="all">All upcoming</option>
-            </select>
-          </div>
-        </div>
-        <div className="row">
+          <span style={{ flex: 1 }} />
           <button className="primary" onClick={scan} disabled={loading}>
             {loading ? "Scanning…" : "Scan"}
           </button>
-          {result && (
-            <span className="sub" style={{ margin: 0 }}>
-              {result.eventsInWindow}/{result.eventsScanned} events in window · updated{" "}
-              {new Date(result.ts).toLocaleTimeString()}
-            </span>
-          )}
         </div>
-        {error && <p style={{ color: "var(--red)", fontSize: 13, marginTop: 10 }}>{error}</p>}
+        {result && (
+          <div className="scan-stats">
+            <span><b>{result.eventsInWindow}</b>/{result.eventsScanned} events in window</span>
+            <span><b>{result.suggested.length + result.other.length}</b> +EV picks found</span>
+            {bestEdge > 0 && <span>best edge <b className="pos">+{pct(bestEdge)}</b></span>}
+            <span>updated {new Date(result.ts).toLocaleTimeString()}</span>
+          </div>
+        )}
+        {error && <p style={{ color: "var(--critical)", fontSize: 13, marginTop: 10 }}>{error}</p>}
       </div>
 
-      {result && (
+      {result && result.suggested.length > 0 && (
         <>
-          <PickTable picks={result.suggested} title="Suggested bets (favorite -200 to -1000)" />
-          <PickTable picks={result.other} title="Other positive-edge picks" />
+          <h2 style={{ fontSize: 13, color: "var(--gold-bright)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 12px" }}>
+            🔥 Suggested bets (favorite -200 to -1000)
+          </h2>
+          <div className="hero-cards">
+            {result.suggested.map((p, i) => <PickCard key={i} pick={p} />)}
+          </div>
         </>
       )}
+
+      {result && <PickTable picks={result.other} title="Other positive-edge picks" />}
 
       <footer>
         Fair probability = average de-vigged sportsbook consensus (The Odds API, moneyline). Kelly stake = quarter-Kelly

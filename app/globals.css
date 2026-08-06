@@ -1,4 +1,5 @@
-:root {
+:root,
+:root[data-theme="dark"] {
   --page: #07080a;
   --surface-solid: #10120f;
   --surface: rgba(255, 255, 255, 0.035);
@@ -21,7 +22,7 @@
   --poly: #199e70;
 
   --bg-image: url("/bg-dark.png");
-  --bg-overlay: rgba(7, 8, 10, 0.62);
+  --bg-overlay: rgba(7, 8, 10, 0.22);
   --banner-bg: linear-gradient(90deg, rgba(237, 161, 0, 0.1), rgba(237, 161, 0, 0.03));
   --banner-border: rgba(237, 161, 0, 0.3);
   --banner-text: #ffcd6b;
@@ -30,7 +31,7 @@
 }
 
 :root[data-theme="light"] {
-  --page: #fbf8f0;
+  --page: #ffffff;
   --surface-solid: #ffffff;
   --surface: rgba(11, 11, 11, 0.03);
   --surface-2: rgba(11, 11, 11, 0.04);
@@ -42,15 +43,75 @@
   --text-secondary: #5b5f52;
   --muted: #8a8d7f;
 
+  --gold: #b87700;
+  --gold-bright: #c98500;
   --good: #0a8a0a;
   --good-bright: #12a555;
   --critical: #c23131;
 
   --bg-image: url("/bg-light.png");
-  --bg-overlay: rgba(255, 255, 255, 0.5);
+  --bg-overlay: rgba(255, 255, 255, 0.35);
   --banner-bg: linear-gradient(90deg, rgba(200, 133, 0, 0.12), rgba(200, 133, 0, 0.05));
   --banner-border: rgba(200, 133, 0, 0.4);
   --banner-text: #7a5000;
+}
+
+:root[data-theme="vegas"] {
+  --page: #0a0510;
+  --surface-solid: #150a1e;
+  --surface: rgba(255, 255, 255, 0.035);
+  --surface-2: rgba(232, 123, 164, 0.09);
+  --border: rgba(232, 123, 164, 0.18);
+  --border-strong: rgba(232, 123, 164, 0.3);
+  --hover-wash: rgba(232, 123, 164, 0.12);
+  --input-bg: rgba(232, 123, 164, 0.06);
+  --text: #fbecf3;
+  --text-secondary: #d6a8c4;
+  --muted: #8f6a80;
+
+  --gold: #e34ea0;
+  --gold-bright: #ff8fc0;
+  --good: #2fe07a;
+  --good-bright: #5fffb0;
+  --critical: #ff5c72;
+
+  --kalshi: #5b9dff;
+  --poly: #b9a8ff;
+
+  --bg-image: url("/bg-vegas.png");
+  --bg-overlay: rgba(10, 5, 16, 0.22);
+  --banner-bg: linear-gradient(90deg, rgba(232, 123, 164, 0.14), rgba(232, 123, 164, 0.04));
+  --banner-border: rgba(232, 123, 164, 0.35);
+  --banner-text: #ffb3d6;
+}
+
+:root[data-theme="field"] {
+  --page: #05100a;
+  --surface-solid: #0b1a10;
+  --surface: rgba(255, 255, 255, 0.035);
+  --surface-2: rgba(61, 220, 151, 0.09);
+  --border: rgba(61, 220, 151, 0.18);
+  --border-strong: rgba(61, 220, 151, 0.3);
+  --hover-wash: rgba(61, 220, 151, 0.12);
+  --input-bg: rgba(61, 220, 151, 0.06);
+  --text: #eafff2;
+  --text-secondary: #a3d9bd;
+  --muted: #5f8a73;
+
+  --gold: #ffc94d;
+  --gold-bright: #ffdb85;
+  --good: #16d16a;
+  --good-bright: #5fffb0;
+  --critical: #ff5c72;
+
+  --kalshi: #3987e5;
+  --poly: #199e70;
+
+  --bg-image: url("/bg-field.png");
+  --bg-overlay: rgba(5, 16, 10, 0.22);
+  --banner-bg: linear-gradient(90deg, rgba(61, 220, 151, 0.14), rgba(61, 220, 151, 0.04));
+  --banner-border: rgba(61, 220, 151, 0.35);
+  --banner-text: #8fffc0;
 }
 
 * { box-sizing: border-box; }
@@ -429,43 +490,52 @@ footer {
 
 a { color: var(--gold-bright); }
 
-/* ---- theme slider ---- */
+/* ---- theme wheel ---- */
 
-.theme-slider {
-  position: relative;
-  width: 56px;
-  height: 28px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  padding: 0;
+.theme-wheel {
   display: inline-flex;
   align-items: center;
-  cursor: pointer;
+  gap: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 4px;
 }
 
-.theme-slider-icon {
-  flex: 1;
-  text-align: center;
-  font-size: 12px;
-  line-height: 1;
-  z-index: 1;
-  opacity: 0.8;
-}
-
-.theme-slider-knob {
-  position: absolute;
-  top: 2px;
-  left: 2px;
+.swatch {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: var(--text);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
-  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
+  border: 2px solid transparent;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.15s, border-color 0.15s;
 }
 
-.theme-slider-knob.light { transform: translateX(26px); }
+.swatch:hover { transform: scale(1.12); }
+
+.swatch.active {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px var(--surface-solid);
+}
+
+.swatch.active::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #fff;
+  text-shadow: 0 0 2px rgba(0,0,0,0.8);
+}
+
+.swatch.dark { background: radial-gradient(circle at 50% 25%, #eda100, #070a08 70%); }
+.swatch.light { background: #ffffff; border-color: rgba(0,0,0,0.15); }
+.swatch.vegas { background: radial-gradient(circle at 50% 25%, #e34ea0, #0a0510 70%); }
+.swatch.field { background: radial-gradient(circle at 50% 25%, #1baf7a, #05100a 70%); }
 
 /* ---- nav ---- */
 

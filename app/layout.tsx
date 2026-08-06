@@ -9,8 +9,9 @@ export const metadata: Metadata = {
 const THEME_SCRIPT = `
 (function () {
   try {
+    var valid = ["dark", "light", "vegas", "field"];
     var saved = localStorage.getItem("sbw-theme");
-    var theme = saved === "light" || saved === "dark" ? saved : "dark";
+    var theme = valid.indexOf(saved) !== -1 ? saved : "dark";
     document.documentElement.setAttribute("data-theme", theme);
   } catch (e) {}
 })();

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { SPORTS } from "@/lib/sports";
 import type { Pick } from "@/lib/types";
-import ThemeSlider from "./ThemeSlider";
+import ThemeWheel from "./ThemeWheel";
 
 interface ScanResult {
   sport: string;
@@ -146,7 +146,7 @@ export default function Dashboard() {
         </div>
         <div className="header-actions">
           <Link href="/changelog" className="nav-link">Patch notes</Link>
-          <ThemeSlider />
+          <ThemeWheel />
         </div>
       </div>
       <div className="sub">De-vigged sportsbook consensus vs. live Kalshi &amp; Polymarket prices.</div>

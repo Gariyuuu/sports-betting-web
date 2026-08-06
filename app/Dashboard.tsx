@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { SPORTS } from "@/lib/sports";
 import type { Pick } from "@/lib/types";
+import ThemeSlider from "./ThemeSlider";
 
 interface ScanResult {
   sport: string;
@@ -141,6 +143,10 @@ export default function Dashboard() {
       <div className="top">
         <div className="brand">
           <h1>🎯 Sports Betting Scanner</h1>
+        </div>
+        <div className="header-actions">
+          <Link href="/changelog" className="nav-link">Patch notes</Link>
+          <ThemeSlider />
         </div>
       </div>
       <div className="sub">De-vigged sportsbook consensus vs. live Kalshi &amp; Polymarket prices.</div>

@@ -215,10 +215,10 @@ h1 {
 .tab:hover { border-color: var(--border-strong); color: var(--text); }
 
 .tab.active {
-  background: linear-gradient(180deg, rgba(237,161,0,0.22), rgba(237,161,0,0.08));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--gold) 22%, transparent), color-mix(in srgb, var(--gold) 8%, transparent));
   border-color: var(--gold);
   color: var(--gold-bright);
-  box-shadow: 0 0 0 1px rgba(237,161,0,0.15), 0 4px 14px rgba(237,161,0,0.15);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--gold) 15%, transparent), 0 4px 14px color-mix(in srgb, var(--gold) 15%, transparent);
 }
 
 .tab .emoji { font-size: 15px; }
@@ -312,7 +312,7 @@ button.primary {
   border-color: transparent;
   color: #241800;
   font-weight: 700;
-  box-shadow: 0 4px 16px rgba(237,161,0,0.3);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--gold) 30%, transparent);
   padding: 10px 22px;
 }
 
@@ -340,8 +340,8 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .pick-card {
   position: relative;
-  background: linear-gradient(160deg, rgba(237,161,0,0.10), transparent 60%), var(--surface-solid);
-  border: 1px solid rgba(237,161,0,0.32);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 10%, transparent), transparent 60%), var(--surface-solid);
+  border: 1px solid color-mix(in srgb, var(--gold) 32%, transparent);
   border-radius: 14px;
   padding: 16px 17px;
   overflow: hidden;
@@ -351,7 +351,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 100% 0%, rgba(237,161,0,0.16), transparent 55%);
+  background: radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--gold) 16%, transparent), transparent 55%);
   pointer-events: none;
 }
 

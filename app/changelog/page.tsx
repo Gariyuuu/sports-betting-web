@@ -2,6 +2,15 @@ import Link from "next/link";
 
 const ENTRIES = [
   {
+    version: "v0.4.0",
+    date: "2026-08-05",
+    items: [
+      "Real favicon/app icon (target mark) instead of the blank default.",
+      "Replaced the light/dark slider with a 4-way theme wheel: Stadium (dark), Paper (light), Vegas, Field.",
+      "Regenerated every background: much stronger, more visible glow + dot grid in the dark themes (the old overlay was muting the PNG too much), and a near-solid, minimal Paper background instead of the washed-out cream one.",
+    ],
+  },
+  {
     version: "v0.3.0",
     date: "2026-08-05",
     items: [

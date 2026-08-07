@@ -1,6 +1,6 @@
 # ARCHITECTURE.md — sports-betting-web
 
-All content **Verified** by direct source inspection at commit `26b6d83` unless marked otherwise.
+All content **Verified** by direct source inspection at commit `26b6d83` unless marked otherwise; reconfirmed unchanged 2026-08-07 (checkpoint C-004 — app code has not changed since `26b6d83`, only documentation).
 
 ## System overview
 

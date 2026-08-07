@@ -14,7 +14,7 @@ None exist.
 
 ## Manual testing performed this session (Verified — actually run)
 
-1. `npm run build` — clean, 0 errors, at commit `26b6d83`.
+1. `npm run build` — clean, 0 errors, at commit `26b6d83`; re-run and reconfirmed clean 2026-08-07 at `174ff9d` (checkpoint C-004, app code unchanged).
 2. `npm run start -- -p 3412` + `curl` against `/` (open, no `SITE_PASSWORD` set locally), `/changelog`, `/bg-*.png` — all expected status codes.
 3. Real login round-trip against the live deployment: `POST /api/login` with the correct password → `{"ok":true}` + cookie → `GET /` with that cookie → 200 (Dashboard, not redirected).
 4. Real scan round-trip against the live deployment: `GET /api/scan?sport=mlb&allDates=true` with the auth cookie → real picks with plausible small edges, confirming the full Odds-API + Kalshi + Polymarket + de-vig + matching + scoring pipeline works end-to-end against live external data (not mocked).

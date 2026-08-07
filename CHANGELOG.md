@@ -2,6 +2,15 @@
 
 This mirrors the in-app patch notes (`app/changelog/page.tsx`) plus records this documentation handoff. Keep both in sync per `CLAUDE.md`'s permanent rules.
 
+## [Unreleased] — Documentation checkpoint C-004 — 2026-08-07
+
+**No product behavior changed.** Documentation-only, plus one new file.
+
+- Added the previously-missing `README.md` (repo had 16/17 canonical doc files).
+- Found and fixed a real stale-documentation contradiction: `PROJECT_STATE.md`, `TASKS.md`, `HANDOFF.md`, `CLAUDE.md`, and `SESSION_LOG.md` all still claimed HEAD was `26b6d83` with the 17-file doc set sitting untracked — but the user had already committed that set as `174ff9d`, and no prior pass had updated the docs to reflect it.
+- Re-ran a repo-wide secret scan across all tracked files (source, config, docs) specifically checking for the class of leak previously found in the sibling `sports-betting-project` repo (plaintext Odds API key / password) — **none found in this repo.**
+- Re-ran `npm run build` — clean, 0 errors.
+
 ## [Unreleased] — Documentation handoff — 2026-08-06
 
 **No product behavior was intentionally changed in this entry.** Documentation-only audit.

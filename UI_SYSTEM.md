@@ -1,6 +1,6 @@
 # UI_SYSTEM.md — sports-betting-web
 
-All file paths **Verified** at commit `26b6d83`.
+All file paths **Verified** at commit `26b6d83`; reconfirmed unchanged 2026-08-07 (checkpoint C-004).
 
 ## Layout system
 

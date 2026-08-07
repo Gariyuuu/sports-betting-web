@@ -12,11 +12,11 @@ In order: `CLAUDE.md` → `PROJECT_STATE.md` → `TASKS.md` → (for the data/ma
 
 ## What is the current task?
 
-**None (application-wise).** Task `C-003`, a third account-switch documentation checkpoint, is complete as of this writing (see `TASKS.md`). The repository is complete, deployed, and verified. Nothing is in progress. The only thing awaiting a decision is whether to `git commit` the 17 untracked documentation files — that decision belongs to the user.
+**None (application-wise).** Task `C-004`, a fourth account-switch documentation checkpoint, is complete as of this writing (see `TASKS.md`). The repository is complete, deployed, and verified, and the full 17-file doc set (including the previously-missing `README.md`) is committed. Nothing is in progress.
 
 ## What was the previous agent doing?
 
-Building the scanner from scratch (2026-08-05, found and fixed 3 real integration bugs the same day via live API testing), then UI/UX iteration in lockstep with the sibling `hyperliquid-bot-web` repo (redesign → real backgrounds + slider → password rotation → 4-theme wheel + real favicon after user feedback that light mode was ugly), then a cross-theme color bug found and fixed, then a full documentation audit (task `C-001`) with no application code changes — during which a real secret-leak near-miss was caught and corrected (see `SESSION_LOG.md`). Then a second checkpoint pass (task `C-002`) adding one previously-undocumented design decision (`DECISIONS.md` D-010). Then a third checkpoint pass (task `C-003`, this entry) re-verifying everything again, re-running `npm run build` fresh, and specifically confirming this repo does not share the sibling `sports-betting-project` repo's on-disk plaintext-credential exposure — also no application code changed across any of the three passes.
+Building the scanner from scratch (2026-08-05, found and fixed 3 real integration bugs the same day via live API testing), then UI/UX iteration in lockstep with the sibling `hyperliquid-bot-web` repo (redesign → real backgrounds + slider → password rotation → 4-theme wheel + real favicon after user feedback that light mode was ugly), then a cross-theme color bug found and fixed, then a full documentation audit (task `C-001`) with no application code changes — during which a real secret-leak near-miss was caught and corrected (see `SESSION_LOG.md`). Then a second checkpoint pass (task `C-002`) adding one previously-undocumented design decision (`DECISIONS.md` D-010). Then a third checkpoint pass (task `C-003`) re-verifying everything again and specifically confirming this repo does not share the sibling `sports-betting-project` repo's on-disk plaintext-credential exposure — that pass left the 17 doc files uncommitted pending the user's decision. **The user then committed them** (commit `174ff9d`), but no subsequent pass had updated the docs to say so until now. This entry (task `C-004`) found that exact contradiction (docs still claimed 17 untracked files at HEAD `26b6d83`), fixed it across every affected file, added the previously-missing `README.md`, and re-ran the secret scan (clean).
 
 ## What works right now?
 
@@ -28,7 +28,7 @@ Nothing known. Zero open bugs. There ARE documented, accepted limitations that a
 
 ## What should I do next?
 
-Nothing required. **Ask the user whether they want the 17 untracked documentation files committed** — the one open, non-technical question left over from the last checkpoint. Otherwise, if given a new task, do it per `CLAUDE.md`. Optional picks if you want somewhere to start: `TASKS.md` T-003 (add `middleware.ts`) or T-004 (improve team matching) are the most valuable non-required improvements.
+Nothing required — the doc-commit question from earlier checkpoints is resolved (all 17 files, including `README.md`, are committed). If given a new task, do it per `CLAUDE.md`. Optional picks if you want somewhere to start: `TASKS.md` T-003 (add `middleware.ts`) or T-004 (improve team matching) are the most valuable non-required improvements.
 
 ## Which files are most important?
 
@@ -48,7 +48,7 @@ Nothing required. **Ask the user whether they want the 17 untracked documentatio
 ```
 cd ~/Projects/sports-betting-web
 git status                 # confirm clean tree
-git log --oneline -5       # confirm you're at or past 26b6d83
+git log --oneline -5       # confirm you're at or past this checkpoint's commit (was 174ff9d + a doc-fix commit as of 2026-08-07)
 npm install                # if node_modules isn't already present
 npm run build               # confirm still clean
 vercel env ls               # confirm ODDS_API_KEY and SITE_PASSWORD are still set
@@ -69,12 +69,18 @@ those files claim. Then run `npm run build` and confirm it is still clean. Summa
 understanding of this project's current state in a few sentences before making any change. If
 you find any contradiction between the docs and the actual repository state, or any documentation
 that looks stale, say so explicitly before proceeding — do not silently trust or silently discard
-it. Do not redo any already-completed work described in CHANGELOG.md or SESSION_LOG.md. Preserve
-the existing architecture (no database, cookie-based shared-password auth, three independent
-external-API integrations with hard-won quirk-handling already in place, CSS-variable-driven
-theming) unless there is a strong, explicitly stated reason to change it. Never write a real
-secret value (ODDS_API_KEY, SITE_PASSWORD, or any cookie token) into any file in this repository.
-After completing whatever task you're given, update PROJECT_STATE.md, TASKS.md, append to
-SESSION_LOG.md, and update any other documentation file your change affects, per the permanent
-rules in CLAUDE.md.
+it. This has actually happened before in this exact repo: as of the C-003 checkpoint (2026-08-06)
+the docs said "17 documentation files sit uncommitted, pending the user's decision" — the user
+then committed them (commit `174ff9d`), and nobody updated the docs to say so until the C-004
+checkpoint (2026-08-07) caught it. Don't assume a doc claim about git/commit state is still true;
+verify it against `git log`/`git status` directly every time. Do not redo any already-completed
+work described in CHANGELOG.md or SESSION_LOG.md. Preserve the existing architecture (no database,
+cookie-based shared-password auth, three independent external-API integrations with hard-won
+quirk-handling already in place, CSS-variable-driven theming) unless there is a strong, explicitly
+stated reason to change it. Never write a real secret value (ODDS_API_KEY, SITE_PASSWORD, or any
+cookie token) into any file in this repository — before finishing any task, grep tracked files for
+secret-shaped strings (this repo's sibling, sports-betting-project, has had a real plaintext-key
+leak, so take this seriously). After completing whatever task you're given, update PROJECT_STATE.md,
+TASKS.md, append to SESSION_LOG.md, and update any other documentation file your change affects,
+per the permanent rules in CLAUDE.md.
 ```

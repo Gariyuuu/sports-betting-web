@@ -6,26 +6,27 @@ Active execution queue. Keep in sync with `PROJECT_STATE.md` and `HANDOFF.md`.
 
 ## Current task
 
-**C-003 — Account-switch checkpoint (third documentation pass). Status: Complete as of this writing.**
+**C-004 — Account-switch checkpoint (fourth documentation pass), plus adding the missing `README.md`. Status: Complete as of this writing.**
 
-- **Exact objective:** Final pre-account-switch re-verification of the repository's current state against the 17-file memory/handoff system (created in C-001, refreshed in C-002, both earlier the same day) so a brand-new Claude Code account can resume correctly, plus a specific check for whether this repo shares the sibling `sports-betting-project` repo's known on-disk plaintext-credential exposure. No feature work, no application-behavior changes.
+- **Exact objective:** Re-verify the repository's actual current state against the 17-file memory/handoff system, create the previously-missing 17th canonical file (`README.md`), re-check specifically for the sibling `sports-betting-project` repo's class of secret leak, and resolve any cross-file contradiction found — including a real one discovered this pass (see below). No application feature work.
 - **What has already been completed:**
-  1. Re-inspected `git status`, `git log`, `git rev-parse HEAD` — confirmed no application code changed since C-002 (still at commit `26b6d83`, still the same 17 untracked doc files, nothing else untracked or modified).
-  2. Read `.env.local` in full and searched the whole repo tree for any other `.env*` file — confirmed the only local env file contains a Vercel-managed `VERCEL_OIDC_TOKEN` and nothing resembling the sibling repo's exposed Odds API / Anthropic keys. `ODDS_API_KEY`/`SITE_PASSWORD` are not present anywhere on local disk in this repo.
-  3. Re-ran `npm run build` fresh this pass (not skipped) — clean, 0 errors.
-  4. Cross-checked `find app lib public -type f` against `CLAUDE.md`'s documented file tree — exact match, no drift.
-  5. Re-ran a secret-value grep across every `.md` file (JWT/API-key-shaped patterns plus literal `ODDS_API_KEY=`/`SITE_PASSWORD=`) — clean; the one regex hit was the full git commit hash in `PROJECT_STATE.md`, a harmless false positive, not a credential.
-  6. Updated `PROJECT_STATE.md`'s audit timestamp/last-completed-task and this file's current-task section to reflect the third pass; appended a new dated entry to `SESSION_LOG.md`.
-- **What remains:** Nothing for this task itself. This checkpoint is fully complete; the repository reverts to having **no active task** (see "Next up" below for optional, non-required follow-ups).
-- **Relevant files:** `PROJECT_STATE.md`, `TASKS.md` (this file), `SESSION_LOG.md`. `CLAUDE.md`, `HANDOFF.md`, and the rest of the doc set were read and spot-checked but needed no correction beyond the current-task cross-reference. No application source files were touched.
-- **Known errors:** None encountered during this checkpoint.
+  1. Ran `git status`, `git log --oneline -5`, `git fetch origin` — found the working tree clean and HEAD at `174ff9d` ("docs: add full handoff documentation system"), i.e. the 17 doc files that C-003 described as "left uncommitted deliberately, pending the user's instruction" had since been committed by the user. **The docs themselves were never updated to reflect that** — `PROJECT_STATE.md`, `TASKS.md`, `HANDOFF.md`, `CLAUDE.md`, and `SESSION_LOG.md` all still asserted HEAD was `26b6d83` with 17 untracked files. This is a genuine stale-documentation bug, now fixed across all five files.
+  2. Confirmed via `ls` that `README.md` was in fact the only missing file (16/17 present) and created it: what the app does, stack, how to run locally, link to the live deploy, explicit note that it's a moneyline-only v1 subset of the Python bot.
+  3. Re-ran `npm run build` fresh — clean, 0 errors (app code unchanged since `26b6d83`).
+  4. Secret scan across all tracked files (`git ls-files` + `git grep` for key/password/token-shaped patterns, plus a dedicated search for 32+ character hex/alphanumeric strings in `.ts`/`.tsx`/`.json`/`.md` files) — **zero real secrets found**, only the expected documentation prose discussing `ODDS_API_KEY`/`SITE_PASSWORD` as concept names and one harmless full git-commit-hash false positive (previously already noted in C-003). Read `.env.local` in full (gitignored, untracked) — contains only a short-lived Vercel-managed `VERCEL_OIDC_TOKEN`, not the sibling repo's exposed Odds API/Anthropic keys.
+  5. Cross-checked `git ls-files` (`app/`, `lib/`, `public/`) against `CLAUDE.md`'s/`FILE_MAP.md`'s documented file tree — exact match, no drift.
+  6. Fixed the stale-commit/stale-untracked-files contradiction in `PROJECT_STATE.md`, `TASKS.md` (this file), `HANDOFF.md`, `CLAUDE.md`, `SESSION_LOG.md`. Refreshed the "Prompt for the next Claude Code account" section in `HANDOFF.md`.
+- **What remains:** Nothing for this task itself. See "Next up" for optional, non-required follow-ups (unchanged from C-003: T-001 through T-005).
+- **Relevant files:** `README.md` (new), `PROJECT_STATE.md`, `TASKS.md` (this file), `HANDOFF.md`, `CLAUDE.md`, `SESSION_LOG.md`. No application source files were touched.
+- **Known errors:** None encountered. The stale-doc contradiction described above is the one real issue this pass found and fixed.
 - **Blockers:** None.
 - **Acceptance criteria:**
-  - The "current task" statement reads consistently (in substance) across `CLAUDE.md`, `PROJECT_STATE.md`, `TASKS.md`, and `HANDOFF.md`.
-  - No real secret value (`ODDS_API_KEY` or `SITE_PASSWORD` value, or any cookie token) appears in any documentation file — Verified via grep this pass.
+  - `README.md` exists and covers purpose/stack/run instructions/live link/v1-subset note.
+  - The "current task"/HEAD-commit/working-tree-state statements read consistently across `CLAUDE.md`, `PROJECT_STATE.md`, `TASKS.md`, and `HANDOFF.md` — Verified, fixed this pass.
+  - No real secret value appears in any tracked file — Verified via `git grep` this pass.
   - `npm run build` passes — Verified, re-run fresh this pass.
-  - No application file was modified, committed, pushed, or deployed as part of this checkpoint.
-- **Verification steps performed:** `git -C . status --short`, `git -C . log --oneline -20`, `git -C . rev-parse HEAD`, full read of `.env.local`, repo-wide `find . -iname "*.env*"`, `npm run build`, `find app lib public -type f` diffed against `CLAUDE.md`'s file tree, `grep -rnE` for secret-shaped strings across all `.md` files.
+  - All doc changes from this pass are committed in one scoped commit; application behavior unchanged.
+- **Verification steps performed:** `git status`, `git log --oneline -5`, `git fetch origin`, `ls` (confirm README.md missing, 16/17 present beforehand), `npm run build`, `git ls-files` + `git grep -niE` for key/password/secret/token patterns across all tracked files, `git grep -noE` for 32+ char hex strings, full read of `.env.local`, `find . -iname "*.env*"`.
 
 ## Next up
 
@@ -104,7 +105,8 @@ _(None — this audit just created the full set.)_
 
 ## Recently completed
 
-- **C-003 — Account-switch checkpoint, third pass** (2026-08-06, documentation-only, no commit): re-verified state (no drift since C-002), re-ran `npm run build` fresh (clean), confirmed this repo does NOT share the sibling repo's on-disk plaintext-credential exposure, re-ran secret-leak scan.
+- **C-004 — Account-switch checkpoint, fourth pass** (2026-08-07, documentation + one new file, committed): found and fixed a real stale-documentation contradiction (docs claimed 17 untracked files at HEAD `26b6d83`; actual state was HEAD `174ff9d` with everything committed), created the previously-missing `README.md`, re-ran `npm run build` (clean), re-ran a repo-wide secret scan across all tracked files (clean — no real `ODDS_API_KEY`/`SITE_PASSWORD` or other credential committed anywhere in this repo).
+- **C-003 — Account-switch checkpoint, third pass** (2026-08-06, documentation-only, no commit at the time — later committed by the user as `174ff9d`): re-verified state (no drift since C-002), re-ran `npm run build` fresh (clean), confirmed this repo does NOT share the sibling repo's on-disk plaintext-credential exposure, re-ran secret-leak scan.
 - **C-002 — Account-switch checkpoint, second pass** (2026-08-06, documentation-only, no commit): re-verified state, refreshed all 17 memory files, added `DECISIONS.md` D-010, re-ran secret-leak scan.
 - **C-001 — Account-switch checkpoint, first pass / initial creation of the 17-file memory system** (2026-08-06, documentation-only, no commit): full repository audit, created all 17 memory files from scratch. Caught and corrected a real accidental secret leak mid-audit (an early `PROJECT_STATE.md` draft briefly contained the literal `SITE_PASSWORD` value) — see `SESSION_LOG.md`.
 - **Fixed cross-theme color leak** (commit `26b6d83`): active sport tab and hero pick-cards stayed gold-tinted in the Vegas/Field themes due to hardcoded `rgba(237,161,0,...)` instead of `var(--gold)`. Fixed with `color-mix()`.

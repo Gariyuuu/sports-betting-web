@@ -2,7 +2,7 @@
 
 > Read this file first, every session, before touching code. It is the primary source of truth for this repository. Also read `PROJECT_STATE.md` and `TASKS.md` immediately after.
 
-Audit performed: 2026-08-06. All claims below are **Verified** against the repository at commit `26b6d83` on `main` unless explicitly marked **Inferred** or **Unknown**.
+Audit performed: 2026-08-06, reconfirmed and corrected 2026-08-07 (checkpoint C-004 — see "Account-switch checkpoints" below). Application code claims below are **Verified** against the repository at commit `26b6d83` on `main` (unchanged since) unless explicitly marked **Inferred** or **Unknown**; documentation/git-state claims are current as of the C-004 pass (commit `174ff9d` plus that pass's own doc-fix commit).
 
 ---
 
@@ -26,7 +26,7 @@ Audit performed: 2026-08-06. All claims below are **Verified** against the repos
 
 - **Current stable state:** Deployed, working, verified via live HTTP checks, a real login+scan round-trip against live Odds API/Kalshi/Polymarket data, and Playwright screenshots across all 4 themes (2026-08-06 audit). No known bugs open.
 - **Latest completed milestone:** v0.4.0 — 4-theme wheel (Stadium/Paper/Vegas/Field), real PNG backgrounds per theme, real app icon/favicon, cross-theme color-consistency fixes (active sport tab and hero pick-cards staying gold in non-gold themes — fixed in commit `26b6d83`).
-- **Current active task:** None (application-wise). Task `C-003` (a third account-switch documentation checkpoint) is complete as of this writing — see `TASKS.md`/`PROJECT_STATE.md`. The only open item is whether the user wants the 17 untracked documentation files committed.
+- **Current active task:** None (application-wise). Task `C-004` (a fourth account-switch documentation checkpoint) is complete as of this writing — see `TASKS.md`/`PROJECT_STATE.md`. All 17 canonical documentation files (including the previously-missing `README.md`) are committed; there is no open item.
 - **Blockers:** None known.
 - **Highest-priority next task:** None queued as required work. See `TASKS.md` for optional follow-ups — the most valuable one is probably tightening team-name matching accuracy (a known, documented weak spot, not a bug in the sense of "broken," more "best-effort by design").
 - **Features currently under construction:** None.
@@ -63,7 +63,7 @@ Single app, run everything from the repo root (`~/Projects/sports-betting-web`).
 |---|---|---|
 | Install dependencies | `npm install` | Verified |
 | Run dev server | `npm run dev` | Documented-only, not run this session |
-| Build for production | `npm run build` | Verified — clean at commit `26b6d83` |
+| Build for production | `npm run build` | Verified — clean at commit `26b6d83`, re-confirmed clean 2026-08-07 at `174ff9d` (app code unchanged) |
 | Start production server locally | `npm run start -- -p <port>` | Verified — used for local smoke tests |
 | Lint | `npm run lint` | **Verified this session it does NOT run non-interactively** — see Linting row above. |
 | Type-check | No standalone script; happens as part of `npm run build` | Verified indirectly |

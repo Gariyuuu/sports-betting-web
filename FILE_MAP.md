@@ -1,6 +1,6 @@
 # FILE_MAP.md — sports-betting-web
 
-Every file in the repository (excluding `node_modules`, `.next`, `.vercel`, `.git`, lockfiles, generated `next-env.d.ts`) is listed. All paths **Verified** to exist at commit `26b6d83`.
+Every file in the repository (excluding `node_modules`, `.next`, `.vercel`, `.git`, lockfiles, generated `next-env.d.ts`) is listed. All paths **Verified** to exist at commit `26b6d83`; reconfirmed unchanged 2026-08-07 (checkpoint C-004 — app code has not changed since). This file intentionally does not list the repo's own documentation files (`README.md`, `CLAUDE.md`, etc.) at the root — see the repo root listing itself for those.
 
 | Path | Purpose | Imports / calls | Imported / called by | Edit when | Risk |
 |---|---|---|---|---|---|

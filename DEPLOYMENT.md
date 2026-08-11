@@ -94,3 +94,11 @@ Standard Vercel rollback (`vercel rollback` or dashboard). Not exercised this se
 ## Post-deployment verification (performed this session, every deploy)
 
 `curl` checks against public routes; real login+scan round trip; Playwright screenshots of all 4 themes after the final deploy.
+
+## Cron Jobs (added 2026-08-11)
+
+`vercel.json` declares one cron: `/api/cron/scan` on `*/15 * * * *`. Requires the account's Vercel plan to support sub-daily cron frequency (Hobby/free plans historically restrict Cron Jobs to once/day) — this account is inferred to be on a Pro plan (seen in an OIDC token during a separate project's deploy this same session), not independently re-confirmed for this specific project. Verify with `vercel crons ls` after any deploy that touches `vercel.json`. The cron route is gated by `CRON_SECRET` (see `SECURITY.md`), not the site-password cookie.
+
+## Storage integration (added 2026-08-11)
+
+Push notifications require Upstash Redis, connected via Vercel's Storage tab (Marketplace Database Providers → Upstash → Redis → connect to this project) rather than the `vercel` CLI (no `storage`/`kv` subcommand exists in the CLI version used this session). This is a one-time manual dashboard action — once connected, `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` are auto-injected and no further deploy steps are needed. See `DATABASE.md`.

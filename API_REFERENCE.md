@@ -80,6 +80,22 @@ Two internal endpoints, three external APIs. No webhooks, no server actions/RPC.
   Cookie: sbw_auth=<token>
   ```
 - **Known issues:** None open. Historical: see `DECISIONS.md` D-005/D-006/D-007 for three real bugs found and fixed in the Kalshi/Polymarket integration paths this route depends on.
+- **2026-08-11:** internal pipeline extracted into `lib/runScan.ts` (also used by `/api/cron/scan` below) — this route's own request/response contract is unchanged.
+
+### `GET /api/push/vapid-key`, `POST /api/push/subscribe`, `POST /api/push/unsubscribe` (added 2026-08-11)
+
+- **Auth:** Cookie-gated, same `authCookieName()`/`isValidCookieToken()` check as every other route.
+- **Purpose:** Register/unregister a browser's `PushSubscription` for Web Push delivery. `vapid-key` hands out the (non-secret) public signing key needed for `PushManager.subscribe()`. `subscribe`/`unsubscribe` store/remove the subscription in Upstash Redis (`lib/pushSubscriptions.ts`).
+- **Request/response:** `subscribe` expects `{endpoint, keys: {p256dh, auth}}` (a `PushSubscription.toJSON()` blob), returns `{subscribed: true}`. `unsubscribe` expects `{endpoint}`, returns `{subscribed: false}`. `vapid-key` (GET, no body) returns `{publicKey: string}` (empty string if unconfigured).
+- **Known issues:** None. Degrade gracefully (503) if Upstash isn't connected yet — see `PROJECT_STATE.md`'s Blockers.
+
+### `GET /api/cron/scan` (added 2026-08-11)
+
+- **Auth:** **Not** cookie-gated (a cron trigger can't log in) — requires `Authorization: Bearer <CRON_SECRET>`, which Vercel auto-attaches to requests it triggers via `vercel.json`'s schedule once that env var is set. Any other caller gets 401.
+- **Purpose:** The background notification trigger. Runs on a 15-minute Vercel Cron schedule, scans all 6 sports via `lib/runScan.ts`, and sends a Web Push notification for any "suggested" pick not already seen (dedup via `lib/pushSubscriptions.ts`'s Redis-backed `SET ... NX`, 26h TTL).
+- **External calls:** Up to 18 per run (6 sports × up to 3 external calls each, same as 6 sequential `/api/scan` calls) — this is the one route in the app that spends `ODDS_API_KEY` credits on a schedule rather than a click. Short-circuits before any external calls if `ODDS_API_KEY` or Upstash isn't configured (501).
+- **Response shape:** `{ranAt, sportsScanned, newPicksFound, notificationsSent, errors: [{sport, error}]}`.
+- **Known issues:** Cannot yet be verified end-to-end (finding a real new pick and confirming exactly one push arrives) until Upstash Redis is connected — see `PROJECT_STATE.md`.
 
 ---
 

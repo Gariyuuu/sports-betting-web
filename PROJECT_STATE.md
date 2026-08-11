@@ -1,77 +1,79 @@
 # PROJECT_STATE.md — sports-betting-web
 
-**Audit timestamp:** 2026-08-07, fourth pass (account-switch checkpoint C-004)
+**Audit timestamp:** 2026-08-11, push-notification feature session
 **Current branch:** `main`
-**Latest commit at start of this pass:** `174ff9d` — "docs: add full handoff documentation system" (the user committed the 17-file doc set that C-003 had left uncommitted; application code is unchanged since `26b6d83`)
-**Working tree:** Was clean at the start of this pass (Verified via `git status` — no untracked/modified files; the 17-file doc set is fully committed, contrary to what earlier drafts of this file and `TASKS.md`/`HANDOFF.md`/`CLAUDE.md` said). This pass adds `README.md` (previously missing — the 17th file) and corrects those stale "17 untracked files, HEAD at `26b6d83`" claims across the doc set; those changes are committed as a single new commit at the end of this pass — run `git log --oneline -3` to see its hash.
+**Latest commit at start of this pass:** see `git log --oneline -1` — prior HEAD was the C-004 checkpoint's commit; this pass adds real application code (not just docs) for the first time since v0.4.0.
 
 ---
 
 ## Active development objective
 
-None. The v1 feature set (Odds-API-vs-Kalshi/Polymarket +EV scanner) is complete and deployed. The only activity since has been two documentation/checkpoint passes (this being the second), neither of which changed application behavior.
+None open. The push-notification feature (v0.5.0) requested this session is code-complete, `npm run build` clean, deployed to production, and its `CRON_SECRET` auth path independently verified via a real authenticated `curl` request. One manual, non-code step remains before it's fully operational end-to-end — see Blockers.
 
 ## Last completed task
 
-**This account-switch checkpoint (fourth pass, C-004)** (see `TASKS.md`'s "Current task" for the full objective/completed/remaining/acceptance-criteria breakdown). Summary: discovered the 17-file doc set (which C-003 described as untracked) had since been committed by the user as `174ff9d`, but `PROJECT_STATE.md`/`TASKS.md`/`HANDOFF.md`/`CLAUDE.md`/`SESSION_LOG.md` still claimed HEAD was `26b6d83` with 17 untracked files — a real, confirmed contradiction between the docs and actual repo state, now fixed. Created the previously-missing `README.md` (the repo had 16/17 canonical files). Re-ran `npm run build` fresh (clean, 0 errors). Re-checked this repo specifically for the sibling `sports-betting-project` repo's known plaintext-credential exposure (Odds API key + Anthropic key) — **not present here**: no tracked file contains a real secret (Verified via `git grep` across all tracked files for key/password/token patterns and 32+ char hex strings — zero real hits), and `.env.local` (gitignored, untracked) contains only a short-lived Vercel-managed `VERCEL_OIDC_TOKEN`, nothing resembling the sibling repo's keys.
+**Real Web Push notifications for new +EV picks**, mirroring the same feature built the same session for the sibling project `~/Projects/quantdesk`. Added:
+- `lib/runScan.ts` — the scan pipeline extracted from `app/api/scan/route.ts` so a second caller could reuse it without duplication (zero behavior change to `/api/scan` itself, confirmed via `npm run build`).
+- `lib/pushSubscriptions.ts` / `lib/notify.ts` — Upstash Redis-backed subscription store + dedup, and a `web-push`/VAPID sender. See `DATABASE.md` (rewritten from scratch, as its own prior version instructed) for the exact data model.
+- `public/sw.js`, `app/ServiceWorkerRegister.tsx`, `app/NotificationsToggle.tsx` — client-side push plumbing, wired into `app/layout.tsx` and `app/Dashboard.tsx`'s header.
+- `app/api/push/{subscribe,unsubscribe,vapid-key}/route.ts` — cookie-gated (same pattern as every other route, see `CLAUDE.md`'s Coding conventions).
+- `app/api/cron/scan/route.ts` + `vercel.json` — the actual background trigger. Runs every 15 minutes (owner's explicit choice after being told the cost tradeoff: ~6 Odds API calls/cycle, ~576/day), gated by a new `CRON_SECRET` rather than the site-password cookie (a cron trigger can't log in).
 
-Before that (third pass, C-003, 2026-08-06): re-verified git state (was still `26b6d83` at that time, still 17 untracked doc files at that time — this was accurate when written, it just was never updated after the user later committed those files), re-ran `npm run build` fresh (clean), re-ran a secret-leak grep across every doc file (clean).
+**Real infrastructure gap hit and resolved during this session:** the cron job needs somewhere to remember which picks it already notified about across independent serverless invocations — this app had zero database. Asked the owner directly rather than guessing; they chose to provision Upstash Redis via Vercel's Storage tab (free tier) over the zero-infrastructure alternative (accepting re-notification spam). VAPID keys and `CRON_SECRET` were generated and set as Vercel env vars during this session; Upstash itself was not yet connected as of this file's last edit — see Blockers.
 
-Before that (first audit, same day): `.tab.active`, `button.primary`'s box-shadow, and `.pick-card`'s background/border/glow in `app/globals.css` were using hardcoded `rgba(237,161,0,...)` (gold) instead of `var(--gold)`, so they stayed gold-tinted even in the Vegas (pink) and Field (green) themes. Fixed with `color-mix(in srgb, var(--gold) N%, transparent)`. Verified via fresh Playwright screenshots of the live deployment showing the active MLB tab correctly picking up pink in Vegas and staying gold-by-design in Field (Field's `--gold` variable is intentionally still a yellow accent — see `DECISIONS.md`).
+Before that (fourth pass, C-004, 2026-08-07): see git history / this file's prior versions for the full account-switch checkpoint record — unchanged by this session, not reproduced here.
 
 ## Current unfinished task
 
-None in terms of application features. This checkpoint itself is the only active "task" and is complete as of this writing (see `TASKS.md`).
+None in terms of code. **One manual step remains: connecting Upstash Redis** (see Blockers) — no further code changes are expected to be needed once that's done, since `lib/pushSubscriptions.ts` already reads the exact env var names Vercel's Storage integration auto-injects.
 
-## Files related to the (non-existent) unfinished feature task
+## Files related to the notification feature
 
-N/A — no feature work is pending. See `TASKS.md` for the checkpoint task's own file list (it touches only documentation files).
+New: `lib/runScan.ts`, `lib/pushSubscriptions.ts`, `lib/notify.ts`, `lib/pushClient.ts`, `public/sw.js`, `app/ServiceWorkerRegister.tsx`, `app/NotificationsToggle.tsx`, `app/api/push/subscribe/route.ts`, `app/api/push/unsubscribe/route.ts`, `app/api/push/vapid-key/route.ts`, `app/api/cron/scan/route.ts`, `vercel.json`. Modified: `app/api/scan/route.ts` (now a thin wrapper around `lib/runScan.ts`), `app/layout.tsx`, `app/Dashboard.tsx`, `package.json` (added `web-push`, `@upstash/redis`, `@types/web-push`).
 
 ## What has already been attempted
 
-Everything attempted this session succeeded and is deployed. One idea was tried and explicitly rejected: decorative "light beam" shapes on the Stadium (dark) background PNG looked bad ("flat solid triangles") and were removed before shipping — see `DECISIONS.md`.
+Everything attempted this session succeeded. One design question was explicitly asked rather than assumed: whether to add real persistence (Upstash, chosen) or accept re-notification spam (the zero-infra alternative) — see "Last completed task" above and `DECISIONS.md` for the fuller record once written there.
 
 ## What currently works (Verified this session)
 
-- `npm run build` completes cleanly (0 errors), re-run fresh this pass at commit `174ff9d` (app code identical to `26b6d83`, only docs changed since).
-- Live production URL (`https://sports-betting-web.vercel.app`) — `/login`, `/changelog`, `/icon.png`, all 4 `public/bg-*.png` return HTTP 200.
-- `POST /api/login` with the currently-set `SITE_PASSWORD` value (Verified working this session; the value itself is intentionally **not recorded in this file** — it is a secret; retrieve it from the Vercel dashboard/CLI if needed, never write it into a committed file) returns `{"ok":true}` and sets a working cookie.
-- With that cookie, `GET /` returns 200 (the Dashboard, not a redirect to `/login`).
-- `GET /api/scan?sport=mlb&allDates=true` (with the cookie) returns real, live picks — spot-checked this session and produced plausible small (1–5%) edges after the Polymarket-moneyline-detection bug was fixed (see `DECISIONS.md`), which is exactly the expected signature of a working de-vig calculation against a reasonably efficient prediction market.
-- All 4 themes (Stadium/Paper/Vegas/Field) render correctly and distinctly, including the active-tab and hero-card colors after the fix in the latest commit (Verified via Playwright screenshots against the live deployment).
-- Theme selection persists via `localStorage` (`sbw-theme`).
+- `npm run build` completes cleanly (0 errors) with all new routes present in the route manifest.
+- Production deploy succeeded (`vercel --prod --yes`); `vercel crons ls` confirms `/api/cron/scan` is registered on the `*/15 * * * *` schedule.
+- `curl https://sports-betting-web.vercel.app/api/cron/scan` with no auth header returns 401 (Verified).
+- The same request with a real, freshly-generated `Bearer $CRON_SECRET` header reaches the handler and returns `{"error":"push storage (Upstash Redis) not configured"}` with status 501 (Verified) — correctly short-circuits before spending any Odds API credits while Upstash is unconfigured, and does not crash.
+- `web-push`'s VAPID keypair was generated locally and set as `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`VAPID_SUBJECT` Vercel env vars (Verified via `vercel env ls`).
 
 ## What currently fails
 
-Nothing known. No open bugs.
+`/api/cron/scan` cannot actually find/dedup/notify about picks yet — it 501s immediately (by design, not a bug) because `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` are not set. This is the sole remaining blocker, not a code defect.
 
 ## Errors currently observed
 
-None.
+None beyond the expected, by-design 501 described above.
 
 ## Blockers
 
-None.
+**Upstash Redis is not connected.** Action needed from the owner: Vercel dashboard → this project → Storage tab → Marketplace Database Providers → Upstash → Redis → connect to `sports-betting-web`. This auto-injects the two env vars `lib/pushSubscriptions.ts` already expects — no further code changes anticipated. Once connected, the next verification step is a real end-to-end cron run (subscribe a real device via the Dashboard's new "🔔 Notifications" toggle, then either wait for the next 15-minute tick or manually `curl` the cron endpoint with `CRON_SECRET`, and confirm a push arrives for a genuinely new pick).
 
 ## Assumptions currently in effect
 
-- Assuming the Vercel project `garywangsmes-8349s-projects/sports-betting-web` remains linked to the same GitHub repo/Vercel account.
-- Assuming The Odds API, Kalshi, and Polymarket's public API contracts (endpoints, field names, `status` semantics) have not changed since last exercised this session. **This is a real, demonstrated risk** — this exact session found 3 real bugs caused by upstream API behavior not matching initial assumptions (see `DECISIONS.md`). Any future issue where picks stop appearing or look wrong should first re-verify these three APIs' current behavior with raw `curl` before assuming the bug is in this repo's code.
-- Assuming `ODDS_API_KEY` (the reused, previously-flagged key — see `CLAUDE.md`) is still valid and has remaining credits. Not independently re-checked at the exact moment of this audit beyond the scan spot-check above succeeding.
+- All assumptions from the prior (2026-08-07) audit still apply unchanged (Odds API/Kalshi/Polymarket contract stability, `ODDS_API_KEY` validity) — not re-verified this session beyond what the existing `/api/scan` route already does.
+- Assuming Vercel's documented behavior (auto-attaching `Authorization: Bearer $CRON_SECRET` to cron-triggered requests once that env var is set) is accurate — this session verified the *route's own check* works correctly against a manually-supplied header, but did not wait for an actual scheduled cron tick to fire and inspect its real headers server-side.
+- Assuming the account's Vercel plan supports frequent (15-min) Cron Jobs — inferred from an earlier `plan":"pro"` field observed in this account's Vercel OIDC token during a separate project's deploy this same session, not independently re-confirmed for this specific project.
 
 ## Temporary decisions
 
-None currently in effect that diverge from documented architecture.
+None currently in effect that diverge from documented architecture, beyond the "Upstash not yet connected" gap already described above.
 
 ## Next three recommended actions
 
-1. **(Optional, not blocking)** Create a real `.env.example` with `ODDS_API_KEY=` and `SITE_PASSWORD=` placeholders — none exists today, which is a minor onboarding gap for a fresh clone.
-2. **(Optional, not blocking)** Set `ODDS_API_KEY` and `SITE_PASSWORD` for Vercel's Preview and Development environments too, if Preview deployments are ever going to be used — currently Production-only.
-3. **(Optional, not blocking)** Consider whether to rotate `ODDS_API_KEY` away from the previously-flagged, plaintext-elsewhere key it currently reuses (see `CLAUDE.md` for the full context) — this is the user's call, not something to do unilaterally.
+1. **(Blocking the feature's actual operation)** Connect Upstash Redis via Vercel's Storage tab, as described above.
+2. **(Verification, after #1)** Trigger one real cron run and confirm a subscribed device receives a push for a genuinely new pick, and that a second run within the same 26h TTL window does NOT re-notify for the same pick.
+3. **(Optional, not blocking)** Everything from the prior audit's "Next three recommended actions" (`.env.example`, Preview/Development env vars, `ODDS_API_KEY` rotation) remains open and unchanged.
 
 ## Verification required before continuing any new task
 
-- Run `git status` and `git log --oneline -5` to confirm no one has pushed additional commits since this audit's HEAD (should be at or past this checkpoint's commit — see the top of this file for the exact hash to look for).
+- Run `git status` and `git log --oneline -5` to confirm no one has pushed additional commits since this audit's HEAD.
 - Run `npm run build` to confirm the build is still clean.
-- If touching anything in `lib/kalshi.ts`, `lib/polymarket.ts`, or `lib/oddsapi.ts`: re-verify the relevant upstream API's current behavior with a raw `curl` before trusting this doc's description of it — these three integrations have a proven history of surprising, undocumented-by-the-provider behavior (see `DECISIONS.md`).
-- If touching `app/globals.css`: re-check all 4 themes visually before considering the change done.
+- Check `vercel env ls` for `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` before assuming the notification feature is fully operational — their presence is the single signal that the manual blocker above has been resolved.
+- If touching anything in `lib/kalshi.ts`, `lib/polymarket.ts`, or `lib/oddsapi.ts`: re-verify the relevant upstream API's current behavior with a raw `curl` before trusting this doc's description of it (unchanged guidance from the prior audit).

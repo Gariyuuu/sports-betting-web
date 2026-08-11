@@ -5,6 +5,7 @@ import Link from "next/link";
 import { SPORTS } from "@/lib/sports";
 import type { Pick } from "@/lib/types";
 import ThemeWheel from "./ThemeWheel";
+import NotificationsToggle from "./NotificationsToggle";
 
 interface ScanResult {
   sport: string;
@@ -146,6 +147,7 @@ export default function Dashboard() {
         </div>
         <div className="header-actions">
           <Link href="/changelog" className="nav-link">Patch notes</Link>
+          <NotificationsToggle />
           <ThemeWheel />
         </div>
       </div>

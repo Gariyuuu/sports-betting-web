@@ -1,22 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sportByKey } from "@/lib/sports";
-import { fetchFairLines, OddsApiError } from "@/lib/oddsapi";
-import { scanKalshi } from "@/lib/kalshi";
-import { scanPolymarket } from "@/lib/polymarket";
-import type { Pick } from "@/lib/types";
+import { runScan, OddsApiError } from "@/lib/runScan";
 import { authCookieName, isValidCookieToken } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
-
-function isTodayOrTomorrowOrAll(iso: string, allDates: boolean): boolean {
-  if (allDates) return true;
-  const now = new Date();
-  const target = new Date(iso);
-  const dayMs = 24 * 60 * 60 * 1000;
-  const todayStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-  const diff = Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate()) - todayStart;
-  return diff >= 0 && diff <= dayMs;
-}
 
 export async function GET(req: NextRequest) {
   const token = req.cookies.get(authCookieName())?.value;
@@ -42,26 +29,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const fairLines = await fetchFairLines(sport.oddsKey, apiKey);
-    const filteredLines = fairLines.filter((l) => isTodayOrTomorrowOrAll(l.commenceTime, allDates));
-
-    const [kalshiPicks, polyPicks] = await Promise.all([
-      sport.kalshiSeries ? scanKalshi(sport.label, sport.kalshiSeries, filteredLines) : Promise.resolve([]),
-      sport.polyTag ? scanPolymarket(sport.label, sport.polyTag, filteredLines) : Promise.resolve([]),
-    ]);
-
-    const picks: Pick[] = [...kalshiPicks, ...polyPicks].sort((a, b) => b.edgePct - a.edgePct);
-    const suggested = picks.filter((p) => p.suggested);
-    const other = picks.filter((p) => !p.suggested);
-
-    return NextResponse.json({
-      sport: sport.label,
-      eventsScanned: fairLines.length,
-      eventsInWindow: filteredLines.length,
-      suggested,
-      other,
-      ts: Date.now(),
-    });
+    const result = await runScan(sport, apiKey, allDates);
+    return NextResponse.json(result);
   } catch (err) {
     if (err instanceof OddsApiError) {
       return NextResponse.json({ error: err.message }, { status: err.status === 401 ? 502 : err.status });

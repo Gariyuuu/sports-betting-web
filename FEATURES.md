@@ -64,6 +64,15 @@ Status classifications: Verified complete / Mostly complete / Partially implemen
 - **Status: Verified complete.** Hand-maintained static array, public/unauthenticated (deliberate — no API cost to view it).
 - **Frontend files:** `app/changelog/page.tsx`.
 
+## Push notifications for new +EV picks (added 2026-08-11)
+
+- **Purpose:** Get a phone notification the moment a background scan finds a new +EV pick, without opening the app.
+- **Status:** Code complete, deployed, `CRON_SECRET` auth path verified live. **Not yet fully operational** — blocked on connecting Upstash Redis (a manual Vercel dashboard step, see `PROJECT_STATE.md`'s Blockers section), without which `/api/cron/scan` returns a graceful 501 instead of running.
+- **How it works:** `app/api/cron/scan/route.ts` runs on Vercel Cron every 15 minutes (`vercel.json`), scans all 6 sports via the same pipeline as a manual scan (`lib/runScan.ts`), and for every currently-"suggested" pick checks `lib/pushSubscriptions.ts`'s Redis-backed dedup set. Genuinely new picks trigger a real Web Push (`lib/notify.ts`, `web-push`/VAPID) to every subscribed device. A device subscribes via the Dashboard header's "🔔 Notifications" toggle (`app/NotificationsToggle.tsx`), which requests browser Notification permission and registers with the service worker (`public/sw.js`).
+- **Cost tradeoff (owner's explicit, informed choice):** the cron job spends `ODDS_API_KEY` credits on a schedule (~6 calls/cycle, ~576/day at 15-minute intervals) rather than only on a manual click — a real, ongoing cost this app didn't have before.
+- **Frontend files:** `app/NotificationsToggle.tsx`, `app/ServiceWorkerRegister.tsx`, `public/sw.js`.
+- **Backend files:** `app/api/cron/scan/route.ts`, `app/api/push/{subscribe,unsubscribe,vapid-key}/route.ts`, `lib/pushSubscriptions.ts`, `lib/notify.ts`, `lib/runScan.ts`.
+
 ## Features NOT present (explicitly, to prevent future re-discovery effort)
 
 - No tennis or boxing scanning (rotating Odds API keys for tournaments — not implemented).
@@ -71,6 +80,6 @@ Status classifications: Verified complete / Mostly complete / Partially implemen
 - No season-record / "hit rate" context alongside picks.
 - No chat assistant (the original Python bot has an Anthropic-powered chat; this app does not).
 - No logout mechanism.
-- No user accounts (one shared password, no per-user anything).
-- No database, no history of past scans, no bet tracking/settlement.
+- No user accounts (one shared password, no per-user anything; push subscriptions are per-device, not per-user, for the same reason).
+- No history of past scans, no bet tracking/settlement. A narrow database now exists (Upstash Redis, see `DATABASE.md`) but it's scoped to push-subscription storage and notification dedup only — not a general persistence layer.
 - No real betting/order placement on Kalshi or Polymarket — this is a scanner/finder tool only, never places a trade.

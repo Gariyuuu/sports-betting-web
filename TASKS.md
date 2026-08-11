@@ -6,7 +6,26 @@ Active execution queue. Keep in sync with `PROJECT_STATE.md` and `HANDOFF.md`.
 
 ## Current task
 
-**C-004 — Account-switch checkpoint (fourth documentation pass), plus adding the missing `README.md`. Status: Complete as of this writing.**
+**T-006 — Real Web Push notifications for new +EV picks (v0.5.0). Status: Code complete, deployed; one manual (non-code) step remaining.**
+
+- **Exact objective:** Notify the owner's phone the moment the background cron scan finds a genuinely new +EV pick, without requiring the app to be open.
+- **What has already been completed:** Full pipeline built and deployed -- see `SESSION_LOG.md`'s 2026-08-11 entry for the complete file list and verification steps, and `PROJECT_STATE.md` for current status. Summary: `lib/runScan.ts` (shared scan pipeline), `lib/pushSubscriptions.ts`/`lib/notify.ts` (Upstash-backed store + `web-push` sender), service worker + toggle UI, three cookie-gated push routes, one `CRON_SECRET`-gated cron route on a 15-minute Vercel Cron schedule (`vercel.json`). `npm run build` clean. Deployed to production. `CRON_SECRET`/VAPID env vars set and verified live via `curl` (401 without auth, correct graceful 501 with it).
+- **What remains:** Connect Upstash Redis via Vercel's Storage tab (Marketplace Database Providers → Upstash → Redis → connect to this project) -- a manual dashboard action, not something achievable via `vercel` CLI in this session. Once connected, do one real end-to-end verification: enable notifications from the Dashboard, wait for (or manually trigger) a cron run, confirm a push arrives for a new pick and does NOT repeat on the next cycle.
+- **Relevant files:** See `SESSION_LOG.md`'s 2026-08-11 entry for the full new/modified file list.
+- **Known errors:** None. The current 501 from `/api/cron/scan` is expected, by-design behavior while Upstash is unconfigured, not a bug.
+- **Blockers:** Upstash Redis not yet connected (see above).
+- **Acceptance criteria:**
+  - `npm run build` passes — Verified.
+  - `/api/cron/scan` rejects requests without the correct `CRON_SECRET` — Verified (401).
+  - `/api/cron/scan` with the correct secret reaches the handler — Verified (graceful 501 pending Upstash).
+  - Once Upstash is connected: a real device receives exactly one push for a new pick, and zero duplicate pushes for the same still-open pick across subsequent cron cycles — **not yet verified, blocked on the manual step above.**
+- **Verification steps performed:** `npm run build` (before and after refactoring `/api/scan`), `vercel crons ls`, `curl` against the live cron endpoint with and without the correct `Authorization` header, `vercel env ls` confirming the 4 new non-Upstash secrets are set.
+
+---
+
+## Prior task (complete)
+
+**C-004 — Account-switch checkpoint (fourth documentation pass), plus adding the missing `README.md`. Status: Complete.**
 
 - **Exact objective:** Re-verify the repository's actual current state against the 17-file memory/handoff system, create the previously-missing 17th canonical file (`README.md`), re-check specifically for the sibling `sports-betting-project` repo's class of secret leak, and resolve any cross-file contradiction found — including a real one discovered this pass (see below). No application feature work.
 - **What has already been completed:**

@@ -147,3 +147,22 @@ The password gate is the only boundary. See `SECURITY.md` for the full review, i
 2. **Team-name matching is fuzzy/best-effort**, not a maintained alias table — accuracy depends on token-overlap heuristics in `lib/match.ts` and is a known, accepted v1 limitation (not a bug).
 3. **Three external API integrations, two of which are third-party public APIs with undocumented quirks already discovered the hard way this session** (Kalshi's `status` filter meaning, `close_time` vs `expected_expiration_time`, Polymarket's spread-markets-also-use-team-names behavior). Any of these providers changing their API behavior again could silently break matching or scoring with no compile-time signal.
 4. **No tests** covering the de-vig math, the matching heuristics, or the Kelly-stake calculation — all currently verified only by spot-checking live results against manual reasoning.
+
+## Background notification path (added 2026-08-11)
+
+A second, independent request path exists alongside the manual scan flow above:
+
+```
+Vercel Cron (*/15 * * * *, vercel.json)
+  --> GET /api/cron/scan (Authorization: Bearer CRON_SECRET)
+      --> lib/runScan.ts, once per sport in lib/sports.ts (same pipeline app/api/scan/route.ts uses)
+          --> for each "suggested" pick: lib/pushSubscriptions.ts's markNotifiedIfNew()
+              (Upstash Redis SET ... NX, 26h TTL -- atomic check-and-mark)
+              --> if new: lib/notify.ts's sendPickNotification()
+                  --> web-push (VAPID) --> every stored PushSubscription
+                      --> browser's public/sw.js --> OS notification
+```
+
+A device enrolls via `app/NotificationsToggle.tsx` (Dashboard header): requests Notification permission, subscribes the service worker with the server's VAPID public key (`GET /api/push/vapid-key`), and POSTs the resulting `PushSubscription` to `POST /api/push/subscribe`, which `lib/pushSubscriptions.ts` stores in a Redis hash. Unlike every other route in this app, `/api/cron/scan` is NOT cookie-gated (a cron trigger can't log in) — it's gated by `CRON_SECRET` instead, checked inline (see `SECURITY.md`).
+
+This path reuses `lib/runScan.ts` (the scan pipeline, factored out of `app/api/scan/route.ts` this same session) rather than duplicating it — the manual-scan flow diagrammed above is otherwise completely unchanged.

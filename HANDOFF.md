@@ -12,7 +12,7 @@ In order: `CLAUDE.md` → `PROJECT_STATE.md` → `TASKS.md` → (for the data/ma
 
 ## What is the current task?
 
-**None (application-wise).** Task `C-004`, a fourth account-switch documentation checkpoint, is complete as of this writing (see `TASKS.md`). The repository is complete, deployed, and verified, and the full 17-file doc set (including the previously-missing `README.md`) is committed. Nothing is in progress.
+**T-006 — real Web Push notifications for new +EV picks (v0.5.0).** Code complete, `npm run build` clean, deployed to production, `CRON_SECRET` auth path verified live via `curl`. **One manual, non-code step remains:** connect Upstash Redis via Vercel's Storage tab (Marketplace Database Providers → Upstash → Redis → connect to `sports-betting-web`) — until then, `/api/cron/scan` returns a graceful 501 instead of running (by design, not a bug; it does not spend Odds API credits while unconfigured). See `PROJECT_STATE.md`'s Blockers section and `TASKS.md`'s T-006 for the full detail. Once connected, no further code changes are expected — just verify one real end-to-end push arrives for a new pick.
 
 ## What was the previous agent doing?
 

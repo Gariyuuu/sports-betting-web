@@ -12,19 +12,28 @@ Binary — authed or not. No roles, no per-resource checks (nothing is owned by 
 
 ## Protected routes
 
-`/` (via `app/page.tsx`'s server-side cookie check + redirect) and `/api/scan` (inline cookie check). **Not centrally enforced** — there is no `middleware.ts`. Both current protected surfaces are correctly gated (Verified), but any *new* route added later will be public by default unless its author remembers to add the same check. This is the single most important structural security note for this repo — see `TASKS.md` T-003.
+`/` (via `app/page.tsx`'s server-side cookie check + redirect), `/api/scan`, and the three new push routes (`/api/push/subscribe`, `/api/push/unsubscribe`, `/api/push/vapid-key`) all use the same inline cookie check (`authCookieName()`/`isValidCookieToken()` from `lib/auth.ts`). **Not centrally enforced** — there is still no `middleware.ts`. Every current protected surface is correctly gated (Verified), but any *new* route added later will be public by default unless its author remembers to add the same check. This is the single most important structural security note for this repo — see `TASKS.md` T-003. The push routes are a fresh example of exactly this risk being manually avoided rather than structurally prevented.
 
 `/login`, `/api/login`, and `/changelog` are intentionally public.
 
+**`/api/cron/scan` is a deliberate, different exception** — it cannot use the cookie check at all (a scheduled cron trigger can't log in). It's gated instead by `CRON_SECRET`: the route requires an `Authorization: Bearer <CRON_SECRET>` header, which Vercel automatically attaches to requests it triggers via `vercel.json`'s cron schedule once that env var is set. Verified live: `curl` without the header returns 401; a manual `curl` with the correct header (extracted from a freshly-generated secret, never round-tripped through `vercel env pull` since Vercel masks values marked Sensitive) reached the handler and returned a real response. This route is also the one place in the app that spends `ODDS_API_KEY` credits on a schedule rather than a click — see `DEPLOYMENT.md` for the cost tradeoff the owner explicitly chose (15-minute interval, ~576 Odds API calls/day from the cron alone).
+
 ## Secret handling
 
-Two real secrets exist: `ODDS_API_KEY` and `SITE_PASSWORD`, both server-side-only Vercel env vars, both **Verified** to never be read client-side (no `NEXT_PUBLIC_` prefix, no client component references either). Neither is committed to this repository (Verified — `.env.local` contains only Vercel CLI metadata, gitignored).
+Six real secrets now exist, all server-side-only Vercel env vars, all **Verified** to never be read client-side (no `NEXT_PUBLIC_` prefix on any of them):
+
+- `ODDS_API_KEY`, `SITE_PASSWORD` (pre-existing, see below for the key-reuse note).
+- `CRON_SECRET` — authorizes `/api/cron/scan`. Generated via `crypto.randomBytes(32).toString('hex')`, never committed, never logged.
+- `VAPID_PRIVATE_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_SUBJECT` — Web Push signing keys (`web-push` npm package). Only the private key is sensitive; the public key is by design sent to the push service on every `subscribe()` call and served back to any authed client via `/api/push/vapid-key`.
+- `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` — auto-injected by Vercel's Storage integration, not manually set. See `DATABASE.md`.
+
+Neither `ODDS_API_KEY` nor `SITE_PASSWORD` nor any of the new secrets are committed to this repository (Verified — `.env.local` contains only Vercel CLI metadata, gitignored).
 
 **Important context (not this repo's fault, but relevant):** `ODDS_API_KEY` reuses a key that is known to sit in plaintext in a *different*, sibling repository (`~/Projects/sports-betting-project/sports-betting-bot/.env` and `.claude/settings.local.json`) — not committed there either, but present on disk unencrypted. This was an explicit, asked-and-confirmed user choice to reuse rather than rotate. If that key is ever rotated, update it in **both** places.
 
 ## Environment variables
 
-See `CLAUDE.md`'s Environment setup table for the full list (2 variables, both server-only, both currently Production-only on Vercel — not set for Preview/Development, see `PROJECT_STATE.md`).
+See `CLAUDE.md`'s Environment setup table for the full list (8 variables as of 2026-08-11 — the original 2 plus `CRON_SECRET`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` — all server-only, all currently Production-only on Vercel, same known Preview/Development gap as before, see `PROJECT_STATE.md`).
 
 ## Client-exposed variables
 
@@ -60,7 +69,7 @@ Not applicable — no webhooks received.
 
 ## Rate limiting
 
-None implemented on either route. `/api/scan` has no rate limit, meaning a compromised cookie or a CSRF scenario (see above) could be used to repeatedly trigger scans and burn API credits. Mitigated in practice by: the cookie being httpOnly (can't be read/exfiltrated by client-side script), and the site being obscure/personal rather than a public target.
+None implemented on `/api/scan` or the push routes. `/api/scan` has no rate limit, meaning a compromised cookie or a CSRF scenario (see above) could be used to repeatedly trigger scans and burn API credits. Mitigated in practice by: the cookie being httpOnly (can't be read/exfiltrated by client-side script), and the site being obscure/personal rather than a public target. `/api/cron/scan` is implicitly rate-limited by Vercel's own cron scheduler (fires at most every 15 minutes per `vercel.json`) — the `CRON_SECRET` check means nobody else can trigger it more often than that.
 
 ## Admin access
 
@@ -68,11 +77,11 @@ Not applicable — no admin tier exists.
 
 ## Database policies
 
-Not applicable — no database.
+Upstash Redis now exists (see `DATABASE.md`) — no formal access policy beyond "the REST token is a server-only secret." No PII is stored: subscription rows are device push endpoints, not user identities (this app has no user accounts). No retention policy needed for the dedup keys (they self-expire via TTL); subscription rows persist until unsubscribe or a 404/410 prunes them.
 
 ## Logging of sensitive data
 
-Neither `ODDS_API_KEY` nor `SITE_PASSWORD` (nor the password's hash) is logged anywhere in application code (Verified via source inspection — no `console.log` exists in this codebase at all, per the zero-markers-found audit result).
+Neither `ODDS_API_KEY`, `SITE_PASSWORD`, `CRON_SECRET`, nor either VAPID key is logged anywhere in application code (Verified via source inspection). One `console.error` now exists in the codebase (`app/ServiceWorkerRegister.tsx`, logs only the browser's own service-worker registration error object) — the prior "zero console.log markers" claim in this file is now stale; corrected here. No secret or user data flows through it.
 
 ## Dependency concerns
 

@@ -24,12 +24,12 @@ Audit performed: 2026-08-06, reconfirmed and corrected 2026-08-07 (checkpoint C-
 
 ## Current status
 
-- **Current stable state:** Deployed, working, verified via live HTTP checks, a real login+scan round-trip against live Odds API/Kalshi/Polymarket data, and Playwright screenshots across all 4 themes (2026-08-06 audit). No known bugs open.
-- **Latest completed milestone:** v0.4.0 — 4-theme wheel (Stadium/Paper/Vegas/Field), real PNG backgrounds per theme, real app icon/favicon, cross-theme color-consistency fixes (active sport tab and hero pick-cards staying gold in non-gold themes — fixed in commit `26b6d83`).
-- **Current active task:** None (application-wise). Task `C-004` (a fourth account-switch documentation checkpoint) is complete as of this writing — see `TASKS.md`/`PROJECT_STATE.md`. All 17 canonical documentation files (including the previously-missing `README.md`) are committed; there is no open item.
-- **Blockers:** None known.
-- **Highest-priority next task:** None queued as required work. See `TASKS.md` for optional follow-ups — the most valuable one is probably tightening team-name matching accuracy (a known, documented weak spot, not a bug in the sense of "broken," more "best-effort by design").
-- **Features currently under construction:** None.
+- **Current stable state:** Deployed, `npm run build` clean. Push-notification infrastructure (v0.5.0) is live in production, but only partially operational — see Blockers.
+- **Latest completed milestone:** v0.5.0 (2026-08-11) — real Web Push notifications for new +EV picks. `lib/pushSubscriptions.ts` (Upstash Redis-backed subscription store + cron dedup), `lib/notify.ts` (`web-push` VAPID sender), `public/sw.js` + `app/ServiceWorkerRegister.tsx`, three new routes (`/api/push/subscribe`, `/api/push/unsubscribe`, `/api/push/vapid-key`, all cookie-gated), `NotificationsToggle.tsx` in the Dashboard header, and `/api/cron/scan` (CRON_SECRET-gated, runs every 15 min per `vercel.json`, scans all 6 sports and pushes for genuinely new suggested picks). `app/api/scan/route.ts`'s pipeline was factored out into `lib/runScan.ts` so both routes share the exact same scan logic. Prior milestone (v0.4.0, 2026-08-06) unchanged: 4-theme wheel, PNG backgrounds, real icon.
+- **Current active task:** None. The notification feature's code is complete, tested (`npm run build` clean, a real authenticated `curl` round-trip against `/api/cron/scan` in production), and deployed — see Blockers for the one remaining manual step.
+- **Blockers:** **Upstash Redis is not yet connected.** `CRON_SECRET`/`VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`VAPID_SUBJECT` are set; `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` are not. Until the owner connects Upstash via Vercel's Storage tab (Marketplace Database Providers → Upstash → Redis → connect to this project), `/api/cron/scan` returns a graceful `501 {"error":"push storage (Upstash Redis) not configured"}` instead of running (Verified live) — it does NOT spend Odds API credits while unconfigured, and does NOT error/crash. Once connected, no further code changes should be needed; the env vars are auto-injected under the exact names `lib/pushSubscriptions.ts` already reads.
+- **Highest-priority next task:** Connect Upstash Redis (see Blockers). After that, verify one real end-to-end cron run finds and pushes a genuinely new pick (can't be verified until real subscriptions + real dedup storage exist). See `TASKS.md` for optional follow-ups beyond that — team-name matching accuracy remains the same known, accepted weak spot as before.
+- **Features currently under construction:** None (notification feature is complete pending the Upstash connection step above, not "in progress").
 
 ---
 
@@ -45,10 +45,11 @@ All versions **Verified** from `package.json` / `package-lock.json` (resolved). 
 | Package manager | npm | Verified via `package-lock.json`; no other lockfile present |
 | Runtime | Node.js | Built/tested under Node v26.3.0 (Inferred from dev environment; not pinned via `.nvmrc`/`engines`) |
 | Styling | Plain CSS (`app/globals.css`) | — |
-| Database | **None.** | N/A |
+| Database | Upstash Redis (via `@upstash/redis`) — push subscriptions + cron dedup only, see `DATABASE.md` | Added 2026-08-11 |
+| Push notifications | `web-push` (VAPID) | `^3.6.7` |
 | Auth | Single shared password → SHA-256-hashed cookie token, no user accounts (see Authentication section) | Custom, no library |
-| Storage provider | **None** beyond 2 Vercel env vars. | N/A |
-| Hosting | Vercel | Project `garywangsmes-8349s-projects/sports-betting-web` |
+| Storage provider | Upstash Redis (see above) + 8 total Vercel env vars (was 2). | — |
+| Hosting | Vercel | Project `garywangsmes-8349s-projects/sports-betting-web`, Cron Jobs enabled (`vercel.json`) |
 | Testing libraries | **None installed.** | N/A |
 | Linting | `next lint` script exists; **no ESLint config file committed**. **Verified this session:** running `npm run lint` launches an interactive setup wizard (`next lint` is deprecated, removal planned in Next.js 16) rather than performing a simple check, and would create a new config + install a dependency if completed. Intentionally cancelled rather than completed during this audit — see `TASKS.md` T-005. | — |
 | External APIs | The Odds API (keyed, paid/metered), Kalshi public markets API (no key), Polymarket Gamma public API (no key) | — |
@@ -82,17 +83,25 @@ Single app, run everything from the repo root (`~/Projects/sports-betting-web`).
 ```
 sports-betting-web/
 ├── app/
-│   ├── layout.tsx            Root layout + no-flash theme-init inline script
+│   ├── layout.tsx            Root layout + no-flash theme-init inline script + <ServiceWorkerRegister />
 │   ├── page.tsx              SERVER component: auth-gate wrapper, redirects to /login if not authed
 │   ├── Dashboard.tsx          CLIENT component: the actual scanner UI (rendered by page.tsx once authed)
 │   ├── login/page.tsx        Password entry form (client)
 │   ├── changelog/page.tsx    Static patch-notes page (public, unauthenticated)
 │   ├── ThemeWheel.tsx         4-swatch theme picker (client)
+│   ├── NotificationsToggle.tsx  Push on/off toggle (client) -- 2026-08-11
+│   ├── ServiceWorkerRegister.tsx  Registers /sw.js (client) -- 2026-08-11
 │   ├── globals.css           All styling: theme variables (4 themes), components
 │   ├── icon.png               App icon — Next.js auto-detects this as favicon
 │   └── api/
 │       ├── login/route.ts    POST — checks password, sets auth cookie
-│       └── scan/route.ts     GET — the core feature: fetch+devig+match+score, auth-gated
+│       ├── scan/route.ts     GET — thin wrapper around lib/runScan.ts, auth-gated
+│       ├── push/
+│       │   ├── subscribe/route.ts    POST — cookie-gated, stores a subscription
+│       │   ├── unsubscribe/route.ts  POST — cookie-gated, removes a subscription
+│       │   └── vapid-key/route.ts    GET — cookie-gated, hands out the public key
+│       └── cron/scan/route.ts  GET — CRON_SECRET-gated (not cookie-gated), runs every
+│                                15 min per vercel.json, pushes for new +EV picks
 ├── lib/                       Pure/server logic, framework-agnostic where possible
 │   ├── auth.ts                Password hashing/cookie-token verification (Node `crypto`)
 │   ├── sports.ts              Static config: 6 supported sports, their API keys/tags
@@ -102,12 +111,19 @@ sports-betting-web/
 │   ├── match.ts               Shared fuzzy team-name matching (token-overlap, not exact aliases)
 │   ├── ev.ts                  Edge/EV/Kelly-stake/American-odds math + bankroll constants
 │   ├── pick.ts                Shared `makePick()` — turns a price+FairLine into a Pick, or null if not +EV
-│   └── types.ts               The one shared `Pick` interface
+│   ├── types.ts               The one shared `Pick` interface
+│   ├── runScan.ts             2026-08-11: the scan pipeline itself, factored out of
+│   │                          api/scan/route.ts so api/cron/scan/route.ts can reuse it
+│   ├── pushSubscriptions.ts   2026-08-11: Upstash-backed subscription store + dedup (see DATABASE.md)
+│   ├── notify.ts              2026-08-11: sends Web Push via the `web-push` package
+│   └── pushClient.ts          2026-08-11: browser-side VAPID key decoding helper
 ├── public/
 │   ├── bg-dark.png            Stadium theme background (default)
 │   ├── bg-light.png           Paper theme background
 │   ├── bg-vegas.png           Vegas theme background
-│   └── bg-field.png           Field theme background
+│   ├── bg-field.png           Field theme background
+│   └── sw.js                  2026-08-11: push-notification service worker
+├── vercel.json                 2026-08-11: cron schedule for api/cron/scan
 ├── package.json / package-lock.json
 ├── tsconfig.json              `@/*` path alias → repo root
 ├── next.config.ts             Empty/default
@@ -135,7 +151,7 @@ See `ARCHITECTURE.md` for the full diagram. Summary:
 - **Authorization flow:** Binary — authed or not. No roles.
 - **Storage flow:** `localStorage` for theme only (`sbw-theme`). No account/session data stored client-side beyond the httpOnly cookie (which client JS cannot read).
 - **External integration flow:** 3 external APIs, all called server-side only: The Odds API (keyed), Kalshi (public), Polymarket (public). See `API_REFERENCE.md`.
-- **Background/scheduled processing:** None. Every scan is triggered live by a button click.
+- **Background/scheduled processing:** `/api/cron/scan` runs on Vercel Cron every 15 minutes (`vercel.json`), scanning all 6 sports and sending a Web Push notification for any genuinely new suggested pick (dedup via Upstash Redis, see `DATABASE.md`). Every manual scan (the original feature) is still triggered live by a button click, unchanged.
 - **Caching:** `/api/scan` and `/api/login` are both `dynamic = "force-dynamic"` (scan route) / inherently dynamic (login is a POST). No caching anywhere in the data path — every scan is a fresh, live, credit-costing call.
 - **Error handling:** Try/catch in the route handler; typed `OddsApiError` class distinguishes Odds-API-specific failures (mapped to specific status codes) from generic errors (502).
 - **Logging:** None beyond default Vercel function logs.
@@ -168,22 +184,28 @@ Full detail in `UI_SYSTEM.md`. Same theme-system architecture as the sibling `hy
 
 ## Environment setup
 
-Two environment variables exist, both **Verified** via `vercel env ls` and direct source inspection. **Never commit real values for either.**
+Eight environment variables exist as of 2026-08-11, all **Verified** via `vercel env ls` and direct source inspection. **Never commit real values for any of them.**
 
-| Variable | Purpose | Required? | Used in | Client or server | Format | Example (safe placeholder) | Environments | Sensitive? |
-|---|---|---|---|---|---|---|---|---|
-| `ODDS_API_KEY` | The Odds API key, used to fetch sportsbook odds for de-vigging | Required for `/api/scan` to function (route returns a graceful 501 if absent, does not crash) | `app/api/scan/route.ts` → `lib/oddsapi.ts` | Server only | Opaque API key string (hex-like) | `your_odds_api_key_here` | Currently only set for Production on Vercel (Verified — `vercel env ls` shows Production only, not Preview/Development) | **Yes** — costs real money per API call |
-| `SITE_PASSWORD` | Single shared password gating the whole site | Optional in code (if unset, `lib/auth.ts`'s `isAuthEnabled()` returns false and the app becomes fully open — see Known issues), but required in practice for this deployment | `lib/auth.ts` → `app/api/login/route.ts`, `app/page.tsx`, `app/api/scan/route.ts` | Server only | Plain string, any characters | `change-me-example` | Production only (same gap as above) | **Yes** — it's the entire access control for a credit-costing feature |
+| Variable | Purpose | Required? | Used in | Client or server | Environments | Sensitive? |
+|---|---|---|---|---|---|---|
+| `ODDS_API_KEY` | The Odds API key, used to fetch sportsbook odds for de-vigging | Required for `/api/scan`/`/api/cron/scan` (both return a graceful error if absent, never crash) | `lib/oddsapi.ts` | Server only | Production only | **Yes** — costs real money per API call |
+| `SITE_PASSWORD` | Single shared password gating the whole site | See Known issues if unset | `lib/auth.ts` | Server only | Production only | **Yes** |
+| `CRON_SECRET` | Authorizes `/api/cron/scan` (Vercel auto-attaches it as a bearer token to cron-triggered requests) | Required for the cron route to ever run (401 without it) | `app/api/cron/scan/route.ts` | Server only | Production only | **Yes** |
+| `VAPID_PUBLIC_KEY` | Web Push public signing key | Required for push subscribe to work | `lib/notify.ts`, `app/api/push/vapid-key/route.ts` | Server only (served to client via the route, never a `NEXT_PUBLIC_` var) | Production only | No (public by design) |
+| `VAPID_PRIVATE_KEY` | Web Push private signing key | Required for push send | `lib/notify.ts` | Server only | Production only | **Yes** |
+| `VAPID_SUBJECT` | `mailto:` contact required by the Web Push spec | Optional (defaults to a placeholder) | `lib/notify.ts` | Server only | Production only | No |
+| `UPSTASH_REDIS_REST_URL` | Redis REST endpoint | Required for push storage/dedup (503/501 gracefully without it) | `lib/pushSubscriptions.ts` | Server only | Auto-injected once connected via Vercel Storage | No (endpoint URL) |
+| `UPSTASH_REDIS_REST_TOKEN` | Redis REST auth token | Required alongside the URL above | `lib/pushSubscriptions.ts` | Server only | Auto-injected once connected via Vercel Storage | **Yes** |
 
-**Local dev setup:** create a `.env.local` (gitignored) with `ODDS_API_KEY=...` and optionally `SITE_PASSWORD=...` (if you omit `SITE_PASSWORD` locally, the app runs fully open, which is convenient for local testing but do not deploy that way). There is no `.env.example` committed in this repo — creating one (with placeholders only, matching the table above) would be a reasonable, low-risk documentation improvement (see `TASKS.md`).
+**Local dev setup:** create a `.env.local` (gitignored) with `ODDS_API_KEY=...` and optionally `SITE_PASSWORD=...`; the push-notification variables are only needed if testing that feature locally. There is no `.env.example` committed in this repo — creating one (with placeholders only, matching the table above) would be a reasonable, low-risk documentation improvement (see `TASKS.md`).
 
-**Known gap (Verified via `vercel env ls`):** both variables are set for the Production environment only, not Preview or Development on Vercel. If a Preview deployment is ever created (e.g., via a PR), it will not have these and `/api/scan` will 501 there and the site will be fully open (no password) there. Not currently a problem since no Preview deployments have been used this session, but worth knowing.
+**Known gap (Verified via `vercel env ls`):** all variables are set for the Production environment only, not Preview or Development on Vercel — same pre-existing gap as before, now applying to 6 more variables. Not currently a problem since no Preview deployments are in use.
 
 ---
 
 ## Database summary
 
-**Not applicable.** No database. See `DATABASE.md` for the equivalent short statement.
+**Upstash Redis, added 2026-08-11.** Two narrow purposes: push-subscription storage and cron-notification dedup. See `DATABASE.md` for the full data model — this is not a general persistence layer, and the core scan pipeline remains entirely stateless/uncached.
 
 ---
 
@@ -231,6 +253,9 @@ See `DEPLOYMENT.md`. Vercel, project `garywangsmes-8349s-projects/sports-betting
 - **`lib/pick.ts`'s `makePick()` filter (`isTradeable`, `edge <= 0 → null`)** — this is what prevents nonsensical or already-settled markets from showing up as "opportunities." Don't bypass it when adding a new data source.
 - **Any hardcoded color in `app/globals.css`** — same rule as the sibling repo, already caused a real bug here too (see `DECISIONS.md`).
 - **Kalshi's `status` query parameter usage in `lib/kalshi.ts`** — do not reintroduce `status=open` as a server-side filter; it returns a *different, wrong* set of markets (see Known issues / `DECISIONS.md` for the exact, counterintuitive reason). The current code fetches unfiltered and filters client-side on `status === "active"` — this was hard-won knowledge, don't revert it.
+- **`app/api/cron/scan/route.ts`'s `CRON_SECRET` check** — this route intentionally does NOT use the cookie-based auth every other route uses (a cron trigger can't log in). Do not add the cookie check here (Vercel's cron requests won't have it, breaking the schedule) and do not remove/weaken the `CRON_SECRET` check (this route spends real `ODDS_API_KEY` credits on every successful call — an unauthenticated version would let anyone burn them on a schedule of their choosing).
+- **`lib/pushSubscriptions.ts`'s `markNotifiedIfNew()` / `SET ... NX`** — this is what prevents the cron job from re-notifying the same still-open pick every 15 minutes. Don't replace with a plain `SET` (loses the atomic check-and-mark) or remove the TTL (dedup keys would accumulate forever).
+- **The `SUMMARY_THRESHOLD` flood guard in `app/api/cron/scan/route.ts`** — without it, the first cron run after Upstash is ever cleared/reset would fire one push per currently-open pick simultaneously. Don't remove without a different flood-prevention mechanism in place first.
 
 ---
 

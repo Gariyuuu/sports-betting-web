@@ -601,4 +601,40 @@ a { color: var(--gold-bright); }
   line-height: 1.7;
 }
 
+/* ---- scan progress ring (loader — never suppressed under reduced motion) ---- */
+
+.scan-ring {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  margin-right: 7px;
+  vertical-align: -2px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, #241800 32%, transparent);
+  border-top-color: #241800;
+  animation: scan-ring-spin 650ms linear infinite;
+}
+
+@keyframes scan-ring-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---- value-arrival flash: real number renders instantly, this is a purely
+   decorative background pulse marking "this just landed" — never a digit
+   count-up, so the DOM never carries an intermediate value. ---- */
+
+.value-flash {
+  border-radius: 5px;
+  animation: value-flash-up 480ms ease-out;
+}
+
+@keyframes value-flash-up {
+  0% { background: color-mix(in srgb, var(--good-bright) 38%, transparent); }
+  100% { background: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .value-flash { animation-duration: .01ms !important; }
+}
+
 .patch-entry li::marker { color: var(--muted); }

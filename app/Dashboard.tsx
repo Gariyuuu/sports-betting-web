@@ -42,7 +42,7 @@ function EdgeMeter({ edge }: { edge: number }) {
   );
 }
 
-function PickCard({ pick }: { pick: Pick }) {
+function PickCard({ pick, flashKey }: { pick: Pick; flashKey: number }) {
   return (
     <div className="pick-card">
       <div className="top-row">
@@ -51,7 +51,7 @@ function PickCard({ pick }: { pick: Pick }) {
           <div className="market">{pick.marketTitle}</div>
         </div>
         <div>
-          <div className="edge-big">+{pct(pick.edgePct)}</div>
+          <div className="edge-big value-flash" key={flashKey}>+{pct(pick.edgePct)}</div>
           <div className="edge-label">edge</div>
         </div>
       </div>
@@ -175,6 +175,7 @@ export default function Dashboard() {
           </div>
           <span style={{ flex: 1 }} />
           <button className="primary" onClick={scan} disabled={loading}>
+            {loading && <span className="scan-ring" aria-hidden="true" />}
             {loading ? "Scanning…" : "Scan"}
           </button>
         </div>
@@ -182,7 +183,9 @@ export default function Dashboard() {
           <div className="scan-stats">
             <span><b>{result.eventsInWindow}</b>/{result.eventsScanned} events in window</span>
             <span><b>{result.suggested.length + result.other.length}</b> +EV picks found</span>
-            {bestEdge > 0 && <span>best edge <b className="pos">+{pct(bestEdge)}</b></span>}
+            {bestEdge > 0 && (
+              <span>best edge <b className="pos value-flash" key={result.ts}>+{pct(bestEdge)}</b></span>
+            )}
             <span>updated {new Date(result.ts).toLocaleTimeString()}</span>
           </div>
         )}
@@ -195,7 +198,7 @@ export default function Dashboard() {
             🔥 Suggested bets (favorite -200 to -1000)
           </h2>
           <div className="hero-cards">
-            {result.suggested.map((p, i) => <PickCard key={i} pick={p} />)}
+            {result.suggested.map((p, i) => <PickCard key={i} pick={p} flashKey={result.ts} />)}
           </div>
         </>
       )}
